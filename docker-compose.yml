@@ -1,0 +1,262 @@
+version: '3.8'
+
+networks:
+  microservices-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  mysql_data:
+  redis_data:
+  rabbitmq_data:
+
+services:
+  # API Gateway
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - USER_SERVICE_URL=http://user-service:3002
+      - PRODUCT_SERVICE_URL=http://product-service:3003
+      - ORDER_SERVICE_URL=http://order-service:3004
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./gateway:/app
+      - /app/node_modules
+    depends_on:
+      - redis
+      - auth-service
+      - user-service
+      - product-service
+      - order-service
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - MONGODB_URI=mongodb://mongodb:27017/auth
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your_jwt_secret_key_here
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    volumes:
+      - ./services/auth-service:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+      - redis
+      - rabbitmq
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # User Service
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - MONGODB_URI=mongodb://mongodb:27017/users
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    volumes:
+      - ./services/user-service:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+      - rabbitmq
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Product Service
+  product-service:
+    build:
+      context: ./services/product-service
+      dockerfile: Dockerfile
+    container_name: product-service
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=root_password
+      - MYSQL_DATABASE=products
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./services/product-service:/app
+      - /app/node_modules
+    depends_on:
+      - mysql
+      - rabbitmq
+      - redis
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Order Service
+  order-service:
+    build:
+      context: ./services/order-service
+      dockerfile: Dockerfile
+    container_name: order-service
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=development
+      - PORT=3004
+      - MONGODB_URI=mongodb://mongodb:27017/orders
+      - USER_SERVICE_URL=http://user-service:3002
+      - PRODUCT_SERVICE_URL=http://product-service:3003
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    volumes:
+      - ./services/order-service:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+      - rabbitmq
+      - user-service
+      - product-service
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # MongoDB (para servicios de autenticación, usuarios y pedidos)
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # MongoDB Express (interfaz web para MongoDB)
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin123
+    depends_on:
+      - mongodb
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # MySQL (para servicio de productos)
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=products
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # phpMyAdmin (interfaz web para MySQL)
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      - PMA_HOST=mysql
+      - PMA_PORT=3306
+    depends_on:
+      - mysql
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Redis (para caché y sesiones)
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # RabbitMQ (para comunicación asíncrona)
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   # AMQP protocol
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Prometheus (para monitoreo)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Grafana (para visualización de métricas)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3100:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./infrastructure/monitoring/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - microservices-network
+    restart: unless-stopped

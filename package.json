@@ -1,0 +1,59 @@
+{
+    "name": "api-microservices",
+    "version": "2.0.0",
+    "description": "Arquitectura completa de microservicios para aplicaciones empresariales",
+    "main": "index.js",
+    "private": true,
+    "workspaces": [
+      "gateway",
+      "services/*",
+      "shared-lib"
+    ],
+    "scripts": {
+      "bootstrap": "lerna bootstrap",
+      "dev": "lerna run dev --parallel",
+      "start": "lerna run start --parallel",
+      "test": "lerna run test --parallel",
+      "test:integration": "lerna run test:integration --parallel",
+      "test:all": "npm run test && npm run test:integration",
+      "test:coverage": "lerna run test:coverage --parallel",
+      "lint": "lerna run lint --parallel",
+      "build": "lerna run build --parallel",
+      "clean": "lerna clean"
+    },
+    "keywords": [
+      "microservices",
+      "api",
+      "node.js",
+      "express",
+      "docker",
+      "kubernetes"
+    ],
+    "author": "Edgar Alberto Ng Angulo <its_shark03@protonmail.com>",
+    "license": "MIT",
+    "devDependencies": {
+      "lerna": "^4.0.0",
+      "eslint": "^8.17.0",
+      "eslint-config-prettier": "^8.5.0",
+      "prettier": "^2.6.2",
+      "husky": "^8.0.1",
+      "lint-staged": "^13.0.3"
+    },
+    "engines": {
+      "node": ">=16.x"
+    },
+    "husky": {
+      "hooks": {
+        "pre-commit": "lint-staged"
+      }
+    },
+    "lint-staged": {
+      "*.js": [
+        "eslint --fix",
+        "prettier --write"
+      ],
+      "*.{json,md}": [
+        "prettier --write"
+      ]
+    }
+  }
