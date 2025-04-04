@@ -22,6 +22,7 @@ Arquitectura completa de microservicios diseñada para aplicaciones empresariale
 
 ## 🏗️ Arquitectura
 
+```
 api-microservices/
 ├── gateway/                    # API Gateway (Node.js/Express)
 │   ├── src/
@@ -71,7 +72,7 @@ api-microservices/
 │   ├── kubernetes/             # Manifiestos K8s para producción
 │   └── monitoring/             # Prometheus/Grafana config
 └── docs/                       # Documentación y diagramas
-
+```
 
 ## 🚀 Tecnologías utilizadas
 
@@ -109,7 +110,7 @@ api-microservices/
 
 ### Configuración del entorno de desarrollo
 
-bash
+```bash
 # Clonar el repositorio
 git clone https://github.com/your-username/api-microservices.git
 cd api-microservices
@@ -125,7 +126,7 @@ docker-compose up -d
 
 # Iniciar en modo desarrollo (con hot-reload)
 npm run dev
-
+```
 
 ## 🌐 Servicios y Puertos
 
@@ -153,7 +154,7 @@ La documentación de la API está disponible en:
 
 ## 🧪 Testing
 
-bash
+```bash
 # Ejecutar tests unitarios
 npm run test
 
@@ -165,7 +166,7 @@ npm run test:all
 
 # Verificar cobertura
 npm run test:coverage
-
+```
 
 ## 🔄 Comunicación entre Servicios
 
@@ -191,14 +192,14 @@ La arquitectura utiliza un modelo de comunicación asíncrona basado en eventos 
 
 Para desplegar en un entorno de producción con Kubernetes:
 
-bash
+```bash
 # Construir y publicar imágenes Docker
 docker-compose build
 docker-compose push
 
 # Aplicar configuración de Kubernetes
 kubectl apply -f infrastructure/kubernetes/
-
+```
 
 ## 👨‍💻 Contribuciones
 
