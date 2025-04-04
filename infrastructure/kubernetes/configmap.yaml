@@ -1,0 +1,264 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: microservices
+data:
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  
+  # URLs de servicios
+  AUTH_SERVICE_URL: "http://auth-service:3001"
+  USER_SERVICE_URL: "http://user-service:3002"
+  PRODUCT_SERVICE_URL: "http://product-service:3003"
+  ORDER_SERVICE_URL: "http://order-service:3004"
+  
+  # Conexiones a servicios
+  REDIS_URL: "redis://redis:6379"
+  RABBITMQ_URL: "amqp://rabbitmq:5672"
+  
+  # MongoDB
+  MONGODB_AUTH_URI: "mongodb://mongodb:27017/auth"
+  MONGODB_USERS_URI: "mongodb://mongodb:27017/users"
+  MONGODB_ORDERS_URI: "mongodb://mongodb:27017/orders"
+  
+  # MySQL
+  MYSQL_HOST: "mysql"
+  MYSQL_PORT: "3306"
+  MYSQL_DATABASE: "products"
+  
+  # Configuración general
+  RATE_LIMIT_WINDOW_MS: "900000"  # 15 minutos
+  RATE_LIMIT_MAX_REQUESTS: "100"
+  JWT_EXPIRES_IN: "1h"
+  REFRESH_TOKEN_EXPIRES_IN: "7d"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: microservices
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              # - alertmanager:9093
+
+    rule_files:
+      # - "alert_rules.yml"
+
+    scrape_configs:
+      - job_name: "prometheus"
+        static_configs:
+          - targets: ["localhost:9090"]
+
+      - job_name: "api_gateway"
+        metrics_path: /metrics
+        static_configs:
+          - targets: ["api-gateway:3000"]
+
+      - job_name: "auth_service"
+        metrics_path: /metrics
+        static_configs:
+          - targets: ["auth-service:3001"]
+
+      - job_name: "user_service"
+        metrics_path: /metrics
+        static_configs:
+          - targets: ["user-service:3002"]
+
+      - job_name: "product_service"
+        metrics_path: /metrics
+        static_configs:
+          - targets: ["product-service:3003"]
+
+      - job_name: "order_service"
+        metrics_path: /metrics
+        static_configs:
+          - targets: ["order-service:3004"]
+
+      - job_name: "kubernetes"
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: microservices
+data:
+  prometheus.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus-server:9090
+      isDefault: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-provider
+  namespace: microservices
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: microservices
+data:
+  services-dashboard.json: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": "-- Grafana --",
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": true,
+      "gnetId": null,
+      "graphTooltip": 0,
+      "id": 1,
+      "links": [],
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 0
+          },
+          "hiddenSeries": false,
+          "id": 2,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(rate(http_request_duration_ms_count[1m])) by (service)",
+              "interval": "",
+              "legendFormat": "{{service}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Requests per Second",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "schemaVersion": 26,
+      "style": "dark",
+      "tags": [],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "",
+      "title": "Microservices Dashboard",
+      "uid": "microservices",
+      "version": 1
+    }
