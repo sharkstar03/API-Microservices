@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Product, Category, Image, Inventory } = require('../models');
+const { Product, Category, Image, Inventory, sequelize } = require('../models');
 const Redis = require('ioredis');
 const { publishProductEvent } = require('../messaging/publisher');
 const logger = require('../utils/logger');
@@ -450,13 +450,6 @@ exports.updateProduct = async (req, res, next) => {
     
     res.status(200).json({
       status: 'success',
-      message: 'Producto eliminado correctamente',
-    });
-  } catch (error) {
-    logger.error(`Error al eliminar producto ${req.params.id}:`, error);
-    next(error);
-  }
-};
       data: {
         product: updatedProduct,
       },
@@ -497,3 +490,10 @@ exports.deleteProduct = async (req, res, next) => {
     
     res.status(200).json({
       status: 'success',
+      message: 'Producto eliminado correctamente',
+    });
+  } catch (error) {
+    logger.error(`Error al eliminar producto ${req.params.id}:`, error);
+    next(error);
+  }
+};
