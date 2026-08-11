@@ -16,7 +16,7 @@
       "microservices",
       "express"
     ],
-    "author": "Edgar Alberto Ng Angulo <its_shark03@protonmail.com>",
+    "author": "Edgar Alberto Ng Angulo <mr_ng03@hotmail.com>",
     "license": "MIT",
     "dependencies": {
       "axios": "^1.1.3",

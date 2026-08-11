@@ -211,7 +211,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📬 Contact
 
-Edgar Alberto Ng Angulo - [its_shark03@protonmail.com](mailto:its_shark03@protonmail.com)
+Edgar Alberto Ng Angulo - [mr_ng03@hotmail.com](mailto:mr_ng03@hotmail.com)
 
 ---
 

@@ -27,6 +27,7 @@ services:
       - PRODUCT_SERVICE_URL=http://product-service:3003
       - ORDER_SERVICE_URL=http://order-service:3004
       - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_no_usar_en_produccion}
     volumes:
       - ./gateway:/app
       - /app/node_modules
@@ -53,7 +54,8 @@ services:
       - PORT=3001
       - MONGODB_URI=mongodb://mongodb:27017/auth
       - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=your_jwt_secret_key_here
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_no_usar_en_produccion}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:-dev_refresh_secret_no_usar_en_produccion}
       - RABBITMQ_URL=amqp://rabbitmq:5672
     volumes:
       - ./services/auth-service:/app
@@ -78,6 +80,7 @@ services:
       - NODE_ENV=development
       - PORT=3002
       - MONGODB_URI=mongodb://mongodb:27017/users
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_no_usar_en_produccion}
       - RABBITMQ_URL=amqp://rabbitmq:5672
     volumes:
       - ./services/user-service:/app
@@ -105,6 +108,7 @@ services:
       - MYSQL_USER=root
       - MYSQL_PASSWORD=root_password
       - MYSQL_DATABASE=products
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_no_usar_en_produccion}
       - RABBITMQ_URL=amqp://rabbitmq:5672
       - REDIS_URL=redis://redis:6379
     volumes:
@@ -132,6 +136,7 @@ services:
       - MONGODB_URI=mongodb://mongodb:27017/orders
       - USER_SERVICE_URL=http://user-service:3002
       - PRODUCT_SERVICE_URL=http://product-service:3003
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_no_usar_en_produccion}
       - RABBITMQ_URL=amqp://rabbitmq:5672
     volumes:
       - ./services/order-service:/app

@@ -29,7 +29,7 @@
       "docker",
       "kubernetes"
     ],
-    "author": "Edgar Alberto Ng Angulo <its_shark03@protonmail.com>",
+    "author": "Edgar Alberto Ng Angulo <mr_ng03@hotmail.com>",
     "license": "MIT",
     "devDependencies": {
       "lerna": "^4.0.0",

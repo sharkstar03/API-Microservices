@@ -1,13 +1,9 @@
 const { Op } = require('sequelize');
 const { Product, Category, Image, Inventory, sequelize } = require('../models');
-const Redis = require('ioredis');
 const { publishProductEvent } = require('../messaging/publisher');
+const { redis, CACHE_EXPIRATION, clearCachePattern } = require('../utils/cache');
 const logger = require('../utils/logger');
 const AppError = require('../utils/AppError');
-
-// Cliente Redis para caché
-const redis = new Redis(process.env.REDIS_URL);
-const CACHE_EXPIRATION = 60 * 15; // 15 minutos
 
 /**
  * Obtener todos los productos (con paginación, filtrado y ordenamiento)
@@ -315,7 +311,7 @@ exports.createProduct = async (req, res, next) => {
     });
     
     // Limpiar caché relacionada con productos
-    await redis.del('products:*');
+    await clearCachePattern('products:*');
     
     // Publicar evento de producto creado
     await publishProductEvent('product.created', {
@@ -437,7 +433,7 @@ exports.updateProduct = async (req, res, next) => {
     // Limpiar caché
     await redis.del(`product:${productId}`);
     await redis.del(`product:${product.slug}`);
-    await redis.del('products:*');
+    await clearCachePattern('products:*');
     
     // Publicar evento de producto actualizado
     await publishProductEvent('product.updated', {
@@ -479,7 +475,7 @@ exports.deleteProduct = async (req, res, next) => {
     // Limpiar caché
     await redis.del(`product:${productId}`);
     await redis.del(`product:${product.slug}`);
-    await redis.del('products:*');
+    await clearCachePattern('products:*');
     
     // Publicar evento de producto eliminado
     await publishProductEvent('product.deleted', {

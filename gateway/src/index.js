@@ -35,7 +35,7 @@ const swaggerOptions = {
       },
       contact: {
         name: 'Edgar Alberto Ng Angulo',
-        email: 'its_shark03@protonmail.com',
+        email: 'mr_ng03@hotmail.com',
       },
     },
     servers: [
