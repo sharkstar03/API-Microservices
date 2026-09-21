@@ -1,218 +1,146 @@
-# API Microservices Architecture
+# API Microservices
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue)
-![Node.js](https://img.shields.io/badge/Node.js-16.x-green)
-![Docker](https://img.shields.io/badge/Docker-Compose-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
+An e-commerce backend split into five independent services, sitting behind an API
+Gateway and talking to each other over RabbitMQ. I built it so I would not have to
+redo the same authentication, proxying, messaging and deployment work every time I
+start a project.
 
-## 📋 Description
+[Versión en español](README.md)
 
-Complete microservices architecture designed for high-availability and scalable enterprise applications. Implements modern design patterns and best practices to build maintainable and robust distributed applications.
+## What's in here
 
-## 🌟 Key Features
+| Service | Port | Storage | Responsibility |
+|---------|------|---------|----------------|
+| gateway | 3000 | Redis | Single entry point: validates the JWT, applies rate limiting and proxies to the right service |
+| auth-service | 3001 | MongoDB + Redis | Sign-up, login, refresh tokens, password recovery, account management |
+| user-service | 3002 | MongoDB | Profiles and addresses |
+| product-service | 3003 | MySQL | Catalog: products, categories, inventory, images, reviews |
+| order-service | 3004 | MongoDB | Orders, payments and shipping |
 
-- **Centralized API Gateway** with authentication, authorization, and rate limiting
-- **Independent services** for users, products, orders, etc.
-- **Asynchronous communication** between services using message queues (RabbitMQ)
-- **Multiple databases** (MongoDB for auth/users/orders, MySQL for products)
-- **Distributed cache** with Redis for improved performance
-- **Circuit breaker** for handling cascading failures
-- **OpenAPI documentation** generated automatically
-- **Comprehensive monitoring** with Prometheus and Grafana
+Supporting infrastructure: RabbitMQ (5672, dashboard on 15672), Redis (6379),
+MongoDB (27017, Mongo Express on 8081), MySQL (3306, phpMyAdmin on 8080),
+Prometheus (9090) and Grafana (3100).
 
-## 🏗️ Architecture
+## Why each service uses a different database
+
+Not for the sake of variety. The catalog has real relationships — nested categories,
+inventory tied to a product, images, reviews — and MySQL with Sequelize gives you
+referential integrity and joins for free. Orders, on the other hand, are almost always
+read whole and their line items only make sense inside the order, so they live as
+documents in MongoDB. Accounts and profiles follow the same reasoning.
+
+Redis holds no business data: it keeps the catalog cache, the rate limiting counters
+and the blacklist of tokens invalidated on logout.
+
+## Service communication
+
+Client calls always come in through the gateway. Between services, though, almost
+everything goes through RabbitMQ events, so no service depends on another being up.
+
+| Publisher | Event | Consumer | Effect |
+|-----------|-------|----------|--------|
+| auth-service | `user.created` | user-service | Creates the matching profile |
+| auth-service | `user.email_verified` | user-service | Marks the profile as verified |
+| order-service | `order.created` | product-service | Reserves inventory |
+| order-service | `order.paid` | product-service | Turns the reservation into an actual stock decrease |
+| order-service | `order.cancelled` | product-service | Releases the reservation |
+| product-service | `product.inventory.updated` | order-service | Syncs availability |
+
+## Getting started
+
+You need Docker and Node 20 or newer.
+
+```bash
+git clone https://github.com/sharkstar03/API-Microservices.git
+cd API-Microservices
+
+cp .env.example .env    # set at least JWT_SECRET
+
+docker compose up -d    # brings up the 5 services and all the infrastructure
+docker compose logs -f  # to see what is going on
+```
+
+Once the containers are up:
+
+- API: `http://localhost:3000/api/v1`
+- Swagger docs: `http://localhost:3000/api-docs`
+- Health check on any service: `GET /health`
+
+To work without Docker, with hot reload:
+
+```bash
+npm install   # workspaces: installs all 6 packages at once
+npm run dev   # starts the 5 services in parallel
+```
+
+In that mode you need MongoDB, MySQL, Redis and RabbitMQ running on your own, and the
+URLs in `.env` have to point to `localhost` instead of the Docker host names.
+
+## Layout
 
 ```
-api-microservices/
-├── gateway/                    # API Gateway (Node.js/Express)
+.
+├── gateway/                 API Gateway
 │   ├── src/
-│   │   ├── middleware/         # Auth, rate limiting, logging
-│   │   ├── routes/             # Route definitions and proxies
-│   │   └── services/           # Internal services
+│   │   ├── middleware/      auth, rate limiting, error handling
+│   │   ├── routes/          proxies to each service
+│   │   └── utils/
 │   └── Dockerfile
 ├── services/
-│   ├── auth-service/           # Authentication service (MongoDB)
-│   │   ├── src/
-│   │   │   ├── controllers/    # Business logic
-│   │   │   ├── models/         # Schemas and models
-│   │   │   ├── routes/         # API endpoints
-│   │   │   ├── messaging/      # RabbitMQ integration
-│   │   │   └── utils/          # Utilities
-│   │   └── Dockerfile
-│   ├── user-service/           # User management (MongoDB)
-│   │   ├── src/
-│   │   │   ├── controllers/    # Business logic
-│   │   │   ├── models/         # Schemas and models
-│   │   │   ├── routes/         # API endpoints
-│   │   │   ├── messaging/      # RabbitMQ integration
-│   │   │   └── utils/          # Utilities
-│   │   └── Dockerfile
-│   ├── product-service/        # Product management (MySQL)
-│   │   ├── src/
-│   │   │   ├── controllers/    # Business logic
-│   │   │   ├── models/         # Sequelize models
-│   │   │   ├── routes/         # API endpoints
-│   │   │   ├── messaging/      # RabbitMQ integration
-│   │   │   └── utils/          # Utilities
-│   │   └── Dockerfile
-│   └── order-service/          # Order management (MongoDB)
-│       ├── src/
-│       │   ├── controllers/    # Business logic
-│       │   ├── models/         # Schemas and models
-│       │   ├── routes/         # API endpoints
-│       │   ├── messaging/      # RabbitMQ integration
-│       │   └── utils/          # Utilities
-│       └── Dockerfile
-├── shared-lib/                 # Shared code between services
-│   ├── models/
-│   ├── utils/
-│   └── middleware/
-├── infrastructure/             # Infrastructure configuration
-│   ├── docker-compose.yml      # Development environment
-│   ├── kubernetes/             # K8s manifests for production
-│   └── monitoring/             # Prometheus/Grafana config
-└── docs/                       # Documentation and diagrams
+│   ├── auth-service/
+│   ├── user-service/
+│   ├── product-service/
+│   └── order-service/       each with src/{controllers,models,routes,messaging,middleware,utils}
+├── shared-lib/              shared code: circuit breaker, HTTP client, pagination, errors
+├── infrastructure/
+│   ├── kubernetes/          production manifests
+│   └── monitoring/          Prometheus configuration
+├── docker-compose.yml
+└── .env.example
 ```
 
-## 🚀 Technologies Used
-
-### Backend
-- **Node.js** and **Express.js** as the main framework
-- **MongoDB** (auth, users, orders) and **MySQL** (products)
-- **Redis** for cache and session management
-- **Sequelize** as ORM for MySQL
-- **Mongoose** for MongoDB models
-
-### Communication
-- **RabbitMQ** for messaging and events between services
-- **REST APIs** with JSON format
-- **JWT** for authentication between services
-
-### Infrastructure
-- **Docker** and **Docker Compose** for development
-- **Kubernetes** for production orchestration
-- **Prometheus** and **Grafana** for monitoring
-- **MongoDB Express** and **phpMyAdmin** for database administration
-
-### Security
-- **JWT** for authentication
-- **bcrypt** for password hashing
-- **Helmet.js** for security headers
-- **Express Rate Limit** for DoS attack protection
-- **express-validator** for input validation
-
-## 🔧 Installation
-
-### Prerequisites
-- Node.js 16.x or higher
-- Docker and Docker Compose
-- Git
-
-### Development Environment Setup
+## Commands
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/api-microservices.git
-cd api-microservices
-
-# Install dependencies
-npm run bootstrap  # Lerna script to install dependencies for all services
-
-# Configure environment variables
-cp .env.example .env
-
-# Start all services with Docker Compose
-docker-compose up -d
-
-# Start in development mode (with hot-reload)
-npm run dev
+npm run dev       # the 5 services locally with nodemon
+npm start         # docker compose up -d
+npm stop          # docker compose down
+npm run logs      # follow the container logs
+npm test          # tests across all workspaces
+npm run lint      # eslint over the whole monorepo
+npm run format    # prettier
 ```
 
-## 🌐 Services and Ports
+## Deployment
 
-| Service | Port | Description |
-|----------|--------|-------------|
-| API Gateway | 3000 | Main entry point for the API |
-| Auth Service | 3001 | Authentication and token management |
-| User Service | 3002 | User and profile management |
-| Product Service | 3003 | Product and category management |
-| Order Service | 3004 | Order and payment management |
-| MongoDB | 27017 | Database for auth, users, and orders |
-| MongoDB Express | 8081 | Web interface for MongoDB |
-| MySQL | 3306 | Database for products |
-| phpMyAdmin | 8080 | Web interface for MySQL |
-| Redis | 6379 | Cache and session storage |
-| RabbitMQ | 5672 | Messaging between services |
-| RabbitMQ Management | 15672 | Web interface for RabbitMQ |
-| Prometheus | 9090 | Metrics collection |
-| Grafana | 3100 | Metrics visualization |
-
-## 📝 API Documentation
-
-API documentation is available at:
-- Swagger UI: http://localhost:3000/api-docs
-
-## 🧪 Testing
+The Kubernetes manifests live in `infrastructure/kubernetes/`. They expect
+`REGISTRY_URL` and `IMAGE_TAG` to be resolved and an `app-secrets` secret to exist
+with a `jwt-secret` key.
 
 ```bash
-# Run unit tests
-npm run test
-
-# Run integration tests
-npm run test:integration
-
-# Run all tests
-npm run test:all
-
-# Check coverage
-npm run test:coverage
-```
-
-## 🔄 Inter-Service Communication
-
-The architecture uses an event-based asynchronous communication model with RabbitMQ:
-
-1. **Event Publishing**: When a service makes an important change, it publishes an event.
-2. **Event Subscription**: Interested services subscribe to specific events.
-3. **Event Handling**: Each service processes received events according to its logic.
-
-### Main Events
-
-| Publisher Service | Event | Subscriber Services | Description |
-|-----------------|--------|----------------------|-------------|
-| Auth Service | user.created | User Service | User created |
-| Auth Service | user.email_verified | User Service | Email verified |
-| User Service | user.profile_updated | Auth Service | Profile updated |
-| Order Service | order.created | Product Service | Order created (reserve inventory) |
-| Order Service | order.paid | Product Service | Order paid (update inventory) |
-| Order Service | order.cancelled | Product Service | Order cancelled (release inventory) |
-| Product Service | product.inventory.updated | Order Service | Inventory updated |
-
-## 🚢 Production Deployment
-
-To deploy in a production environment with Kubernetes:
-
-```bash
-# Build and publish Docker images
-docker-compose build
-docker-compose push
-
-# Apply Kubernetes configuration
+docker compose build
+docker compose push
 kubectl apply -f infrastructure/kubernetes/
 ```
 
-## 👨‍💻 Contributions
+## Known limitations
 
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for more details about our code of conduct and pull request process.
+Things I know are missing, in case anyone runs into them:
 
-## 📜 License
+- **No saga or distributed compensation.** If order-service creates an order and the
+  inventory reservation fails in product-service, the order is left inconsistent.
+  That is the next significant piece of work.
+- **The RabbitMQ consumer requeues forever.** On a non-recoverable error it nacks with
+  requeue, so a poison message loops indefinitely. It needs a dead letter queue.
+- **Payments are simulated.** `paymentController` does not talk to a real gateway.
+- **Everything under `/api/v1` requires a token**, including reading the catalog. For a
+  real storefront the product `GET` endpoints should be public.
+- **`shared-lib/` is not wired in yet.** The circuit breaker, HTTP client and pagination
+  helpers are written, but no service imports them: each one keeps its own copy of the
+  logger and the error class. Unifying that is still pending.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## License
 
-## 📬 Contact
+MIT. See [LICENSE](LICENSE).
 
-Edgar Alberto Ng Angulo - [mr_ng03@hotmail.com](mailto:mr_ng03@hotmail.com)
-
----
-
-⭐ Star this repository if you find it useful!
+Edgar Alberto Ng Angulo — mr_ng03@hotmail.com

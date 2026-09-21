@@ -1,5 +1,3 @@
-version: '3.8'
-
 networks:
   microservices-network:
     driver: bridge
@@ -244,7 +242,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./infrastructure/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - microservices-network
     restart: unless-stopped

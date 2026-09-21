@@ -2,20 +2,14 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets:
-          # - alertmanager:9093
-
-rule_files:
-  # - "alert_rules.yml"
-
 scrape_configs:
   - job_name: "prometheus"
     static_configs:
       - targets: ["localhost:9090"]
 
+  # Los servicios todavia no exponen /metrics: falta instrumentarlos con
+  # prom-client. Los targets quedan definidos para que empiecen a reportar
+  # en cuanto se añada el endpoint.
   - job_name: "api_gateway"
     metrics_path: /metrics
     static_configs:
@@ -41,22 +35,7 @@ scrape_configs:
     static_configs:
       - targets: ["order-service:3004"]
 
+  # RabbitMQ trae su propio exporter en el plugin de management
   - job_name: "rabbitmq"
     static_configs:
       - targets: ["rabbitmq:15692"]
-
-  - job_name: "redis"
-    static_configs:
-      - targets: ["redis-exporter:9121"]
-
-  - job_name: "mongodb"
-    static_configs:
-      - targets: ["mongodb-exporter:9216"]
-
-  - job_name: "mysql"
-    static_configs:
-      - targets: ["mysql-exporter:9104"]
-
-  - job_name: "node_exporter"
-    static_configs:
-      - targets: ["node-exporter:9100"]

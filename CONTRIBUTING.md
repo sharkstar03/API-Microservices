@@ -1,116 +1,49 @@
-# Guía de Contribución
+# Cómo contribuir
 
-¡Gracias por tu interés en contribuir a este proyecto de arquitectura de microservicios! Esta guía te ayudará a configurar el entorno de desarrollo y a entender el proceso de contribución.
+Gracias por el interés. Esto es lo mínimo que necesitas para ponerte a trabajar.
 
-## Código de Conducta
+## Entorno
 
-Este proyecto sigue un [Código de Conducta](CODE_OF_CONDUCT.md). Al participar en este proyecto, aceptas cumplir con sus términos.
+```bash
+git clone https://github.com/sharkstar03/API-Microservices.git
+cd API-Microservices
 
-## Configuración del Entorno de Desarrollo
+npm install             # workspaces, instala los 6 paquetes
+cp .env.example .env
 
-1. **Clonar el repositorio**:
-   ```bash
-   git clone https://github.com/your-username/api-microservices.git
-   cd api-microservices
-   ```
+docker compose up -d    # infraestructura y servicios
+```
 
-2. **Instalar dependencias**:
-   ```bash
-   npm run bootstrap
-   ```
+Si prefieres correr los servicios fuera de Docker, `npm run dev` los levanta con
+nodemon, pero necesitas MongoDB, MySQL, Redis y RabbitMQ disponibles por tu cuenta.
 
-3. **Configurar variables de entorno**:
-   ```bash
-   cp .env.example .env
-   ```
-   Asegúrate de ajustar las variables según tu entorno.
+## Dónde va cada cosa
 
-4. **Iniciar servicios**:
-   ```bash
-   docker-compose up -d
-   ```
+- `gateway/` — autenticación, rate limiting y proxy hacia los servicios
+- `services/` — un directorio por microservicio, todos con la misma estructura interna
+- `shared-lib/` — utilidades comunes (circuit breaker, cliente HTTP, paginación, errores)
+- `infrastructure/` — Kubernetes y configuración de Prometheus
 
-5. **Ejecutar en modo desarrollo**:
-   ```bash
-   npm run dev
-   ```
+Si añades un servicio nuevo, repite la estructura de `services/user-service`: es la
+más completa y sirve de referencia.
 
-## Estructura del Proyecto
+## Antes de abrir un PR
 
-Antes de contribuir, familiarízate con la estructura del proyecto:
+```bash
+npm run lint
+npm test
+```
 
-- `gateway/` - API Gateway que maneja autenticación y enrutamiento
-- `services/` - Microservicios individuales
-- `shared-lib/` - Código compartido entre servicios
-- `infrastructure/` - Configuración de infraestructura y despliegue
+Ambos tienen que pasar. Los commits siguen [Conventional Commits](https://www.conventionalcommits.org/),
+por ejemplo `feat: añadir dead letter queue al consumidor de órdenes`.
 
-## Flujo de Trabajo para Contribuciones
+Trabaja siempre sobre una rama:
 
-1. **Crear una rama para tu cambio**:
-   ```bash
-   git checkout -b feature/tu-nueva-funcionalidad
-   ```
+```bash
+git checkout -b feat/lo-que-sea
+```
 
-2. **Realizar cambios y pruebas**:
-   - Sigue las convenciones de código del proyecto
-   - Añade pruebas para nuevas funcionalidades
-   - Asegúrate de que todas las pruebas pasen
+## Reportar un bug
 
-3. **Commits**:
-   - Utiliza mensajes de commit descriptivos
-   - Sigue la convención de [Conventional Commits](https://www.conventionalcommits.org/)
-   - Ejemplo: `feat: añadir autenticación con Google OAuth`
-
-4. **Verificar calidad del código**:
-   ```bash
-   npm run lint
-   npm run test
-   ```
-
-5. **Enviar Pull Request**:
-   - Sube tu rama al repositorio: `git push origin feature/tu-nueva-funcionalidad`
-   - Abre un Pull Request desde GitHub
-   - Describe detalladamente los cambios realizados
-
-## Pautas de Estilo de Código
-
-- Sigue el estilo definido en las configuraciones de ESLint y Prettier
-- Mantén el código simple y legible
-- Documenta APIs y funciones complejas
-- Usa nombres descriptivos para variables y funciones
-
-## Revisión de Código
-
-- Todos los Pull Requests serán revisados por al menos un mantenedor
-- Los comentarios y sugerencias deben abordarse antes de la aprobación
-- Las revisiones son una oportunidad para mejorar la calidad del código
-
-## Reportar Bugs
-
-Si encuentras un bug, por favor reporta un issue en GitHub con:
-
-- **Título**: Descripción clara y concisa del problema
-- **Pasos para reproducir**: Instrucciones detalladas
-- **Comportamiento esperado**: Lo que debería ocurrir
-- **Comportamiento actual**: Lo que ocurre actualmente
-- **Entorno**: Sistema operativo, versión de Node.js, etc.
-- **Capturas de pantalla**: Si aplica
-
-## Solicitar Nuevas Funcionalidades
-
-Las solicitudes de nuevas funcionalidades son bienvenidas. Proporciona:
-
-- Una descripción clara de la funcionalidad
-- Justificación de su inclusión
-- Posibles enfoques de implementación
-
-## Comunicación
-
-Para cualquier pregunta relacionada con el desarrollo, puedes:
-
-- Abrir una discusión en GitHub
-- Contactar a los mantenedores principales
-
----
-
-¡Gracias por contribuir a este proyecto!
+Abre un issue e incluye qué esperabas, qué pasó, y los pasos para reproducirlo. Si el
+fallo es de un servicio concreto, adjunta la salida de `docker compose logs <servicio>`.

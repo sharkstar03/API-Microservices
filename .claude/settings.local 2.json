@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git mv *)",
+      "Bash(xargs sed -i '' 's/its_shark03@protonmail\\\\.com/mr_ng03@hotmail.com/g')",
+      "Bash(node -e ' *)",
+      "Bash(git commit *)",
+      "Bash(npm install *)"
+    ]
+  }
+}

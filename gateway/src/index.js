@@ -8,7 +8,7 @@ const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
 const authMiddleware = require('./middleware/auth');
-const rateLimitMiddleware = require('./middleware/rateLimit');
+const { rateLimitMiddleware, authRateLimitMiddleware } = require('./middleware/rateLimit');
 const errorHandlerMiddleware = require('./middleware/errorHandler');
 const logger = require('./utils/logger');
 
@@ -59,12 +59,13 @@ app.use(morgan('combined', { stream: logger.stream }));
 // Documentación API
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// Rutas públicas
-app.use('/api/v1/auth', authRoutes);
+// Rutas públicas. Llevan su propio límite por IP: son el objetivo habitual
+// de los ataques de fuerza bruta y no pasan por el limitador general.
+app.use('/api/v1/auth', authRateLimitMiddleware, authRoutes);
 
-// Middleware para proteger rutas
-app.use('/api/v1', rateLimitMiddleware);
+// A partir de aquí hace falta token
 app.use('/api/v1', authMiddleware);
+app.use('/api/v1', rateLimitMiddleware);
 
 // Rutas protegidas
 app.use('/api/v1/users', userRoutes);
